@@ -36,7 +36,7 @@ class BtActivity : AppCompatActivity() {
 
         val adapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
         if (adapter == null || !adapter.isEnabled) {
-            Toast.makeText(this, "没有找到蓝牙适配器", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "蓝牙功能未开启", Toast.LENGTH_LONG).show()
             finish()
         } else {
             mBluetoothAdapter = adapter
