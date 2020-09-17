@@ -5,24 +5,30 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.viewholder.BaseViewHolder
 import kotlinx.android.synthetic.main.activity_bt.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 蓝牙连接页面
  */
-class BtActivity : AppCompatActivity() {
+class BtConnectActivity : AppCompatActivity() {
 
     private lateinit var mBluetoothAdapter: BluetoothAdapter
 
-    private val mList: MutableList<PrintDeviceBean> = mutableListOf()
+    private val mBtDeviceList: MutableList<PrintDeviceBean> = mutableListOf()
     private val mBluetoothDiscovery by lazy { BluetoothDiscovery(this, mBluetoothAdapter) }
     private val mAdapter by lazy {
         object :
-            BaseQuickAdapter<PrintDeviceBean, BaseViewHolder>(android.R.layout.simple_list_item_2, mList) {
+            BaseQuickAdapter<PrintDeviceBean, BaseViewHolder>(
+                android.R.layout.simple_list_item_2, mBtDeviceList
+            ) {
             override fun convert(holder: BaseViewHolder, item: PrintDeviceBean) {
                 holder.setText(android.R.id.text1, item.name)
                 holder.setText(android.R.id.text2, item.mac)
@@ -35,7 +41,8 @@ class BtActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_bt)
 
-        initViewAndListener()
+        initView()
+        initListener()
 
         val adapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
         if (adapter == null || !adapter.isEnabled) {
@@ -43,51 +50,48 @@ class BtActivity : AppCompatActivity() {
             finish()
         } else {
             mBluetoothAdapter = adapter
+            initBlu()
             lifecycle.addObserver(mBluetoothDiscovery)
             if (!mBluetoothAdapter.isEnabled) {
                 val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
                 startActivityForResult(enableBtIntent, 2)
             } else {
-                initBT()
+                startSearchBtDevices()
             }
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (mBluetoothAdapter.isEnabled) initBT() else finish()
+        if (mBluetoothAdapter.isEnabled) startSearchBtDevices() else finish()
     }
 
-    private fun initViewAndListener() {
+    private fun initView() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.addItemDecoration(
             DividerItemDecoration(this, DividerItemDecoration.VERTICAL)
         )
         recyclerView.adapter = mAdapter
-        mAdapter.setOnItemClickListener { _, _, position ->
-            mLoadingDialog.show()
-            Printer.connectBluetooth(mBluetoothAdapter, mList[position].mac) {
-                mLoadingDialog.dismiss()
-                Toast.makeText(
-                    applicationContext, if (it) "蓝牙连接成功" else "蓝牙连接失败", Toast.LENGTH_LONG
-                ).show()
-                if (it) finish()
-            }
-        }
         swipeRefresh.setColorSchemeResources(R.color.colorPrimary)
+    }
+
+    private fun initListener() {
         swipeRefresh.setOnRefreshListener {
             mBluetoothDiscovery.disReceiver()
-            initBT()
+            startSearchBtDevices()
             if (swipeRefresh.isRefreshing) swipeRefresh.isRefreshing = false
+        }
+        mAdapter.setOnItemClickListener { _, _, position ->
+            lifecycleScope.launch(Dispatchers.Main) {
+                connectBtDevice(mBtDeviceList[position])
+            }
         }
     }
 
-    private fun initBT() {
-        mList.clear()
-        mAdapter.notifyDataSetChanged()
+    private fun initBlu() {
         mBluetoothDiscovery.mListener = { name, macAddress ->
             var isHas = false
-            for (printBT in mList) {
+            for (printBT in mBtDeviceList) {
                 if (name == printBT.mac) {
                     isHas = true
                     break
@@ -95,11 +99,28 @@ class BtActivity : AppCompatActivity() {
             }
             if (!isHas) {
                 val printBT = PrintDeviceBean(name, macAddress)
-                mList.add(printBT)
+                mBtDeviceList.add(printBT)
                 mAdapter.notifyDataSetChanged()
             }
         }
+    }
+
+    private fun startSearchBtDevices() {
+        mBtDeviceList.clear()
+        mAdapter.notifyDataSetChanged()
         mBluetoothDiscovery.doDiscovery()
+    }
+
+    private suspend fun connectBtDevice(device: PrintDeviceBean) {
+        mLoadingDialog.show()
+        val connectResult = withContext(Dispatchers.IO) {
+            Printer.connectBluetooth(mBluetoothAdapter, device.mac)
+        }
+        mLoadingDialog.dismiss()
+        Toast.makeText(
+            applicationContext, if (connectResult) "蓝牙连接成功" else "蓝牙连接失败", Toast.LENGTH_LONG
+        ).show()
+        if (connectResult) finish()
     }
 
 }

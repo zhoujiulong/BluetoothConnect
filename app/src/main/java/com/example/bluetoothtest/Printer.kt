@@ -18,9 +18,7 @@ object Printer {
     private var mInputStream: InputStream? = null
     private var mOutputStream: OutputStream? = null
 
-    fun connectBluetooth(
-        bluetoothAdapter: BluetoothAdapter, macAddress: String, resultListener: (Boolean) -> Unit
-    ) {
+    fun connectBluetooth(bluetoothAdapter: BluetoothAdapter, macAddress: String): Boolean {
         try {
             if (BluetoothAdapter.checkBluetoothAddress(macAddress)) {
                 mDevice = bluetoothAdapter.getRemoteDevice(macAddress)
@@ -30,12 +28,12 @@ object Printer {
                 mSocket?.connect()
                 mInputStream = mSocket?.inputStream
                 mOutputStream = mSocket?.outputStream
-                resultListener(mInputStream != null && mOutputStream != null)
+                return mInputStream != null && mOutputStream != null
             }
         } catch (var2: IOException) {
             var2.printStackTrace()
-            resultListener(false)
         }
+        return false
     }
 
     fun closeBluetooth() {

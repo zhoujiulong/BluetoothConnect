@@ -22,7 +22,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".BtActivity" />
+        <activity android:name=".BtConnectActivity" />
     </application>
 
 </manifest>

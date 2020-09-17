@@ -32,7 +32,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         connectBluetooth.setOnClickListener {
-            startActivity(Intent(this, BtActivity::class.java))
+            startActivity(Intent(this, BtConnectActivity::class.java))
         }
         tvPrintQrCodeTest.setOnClickListener {
             printQRCodeTest()
