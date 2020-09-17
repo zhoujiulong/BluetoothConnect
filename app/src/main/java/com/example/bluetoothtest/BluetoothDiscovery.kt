@@ -1,6 +1,5 @@
 package com.example.bluetoothtest
 
-import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.content.BroadcastReceiver
@@ -11,39 +10,21 @@ import android.text.TextUtils
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.tbruyelle.rxpermissions.RxPermissions
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.OnLifecycleEvent
 
 /**
- * Created by NO on 2018/7/24.
+ * 蓝牙搜索
  */
-class Bluetooth constructor(
+class BluetoothDiscovery constructor(
     private val mActivity: AppCompatActivity, private val mBluetoothAdapter: BluetoothAdapter
-) {
+) : LifecycleObserver {
 
     var mListener: ((String, String) -> Unit)? = null
 
-    fun doDiscovery() {
-        registerBroadcast()
-        val rxPermissions = RxPermissions(mActivity)
-        rxPermissions.request(
-            Manifest.permission.BLUETOOTH_ADMIN,
-            Manifest.permission.BLUETOOTH,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ).subscribe { aBoolean ->
-            if (aBoolean) {
-                if (mBluetoothAdapter.isDiscovering) mBluetoothAdapter.cancelDiscovery()
-                mBluetoothAdapter.startDiscovery()
-            } else {
-                Toast.makeText(
-                    mActivity.applicationContext,
-                    "no bluetooth permission",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-    }
-
-    private fun registerBroadcast() {
+    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
+    fun onCreate() {
         val intent = IntentFilter()
         intent.addAction(BluetoothDevice.ACTION_FOUND) // 用BroadcastReceiver来取得搜索结果
         intent.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
@@ -51,8 +32,18 @@ class Bluetooth constructor(
         mActivity.registerReceiver(mReceiver, intent)
     }
 
-    fun disReceiver() {
+    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    fun onDestroy() {
+        disReceiver()
         mActivity.unregisterReceiver(mReceiver)
+    }
+
+    fun doDiscovery() {
+        if (mBluetoothAdapter.isDiscovering) mBluetoothAdapter.cancelDiscovery()
+        mBluetoothAdapter.startDiscovery()
+    }
+
+    fun disReceiver() {
         if (mBluetoothAdapter.isDiscovering) mBluetoothAdapter.cancelDiscovery()
     }
 
@@ -63,7 +54,7 @@ class Bluetooth constructor(
             when (action) {
                 BluetoothDevice.ACTION_FOUND -> {
                     device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-                    if (device != null && device.bluetoothClass.majorDeviceClass == 1536) {
+                    if (device != null) {
                         mListener?.apply {
                             this(
                                 if (TextUtils.isEmpty(device.name)) "UnKnown" else device.name,
@@ -76,9 +67,15 @@ class Bluetooth constructor(
                     device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
                     if (device != null) {
                         when (device.bondState) {
-                            BluetoothDevice.BOND_BONDING -> Log.d("Print", "正在配对......")
-                            BluetoothDevice.BOND_BONDED -> Log.d("Print", "完成配对")
-                            BluetoothDevice.BOND_NONE -> Log.d("Print", "取消配对")
+                            BluetoothDevice.BOND_BONDING -> {
+                                Toast.makeText(mActivity, "正在配对......", Toast.LENGTH_SHORT).show()
+                            }
+                            BluetoothDevice.BOND_BONDED -> {
+                                Toast.makeText(mActivity, "完成配对......", Toast.LENGTH_SHORT).show()
+                            }
+                            BluetoothDevice.BOND_NONE -> {
+                                Toast.makeText(mActivity, "取消配对......", Toast.LENGTH_SHORT).show()
+                            }
                             else -> {
                             }
                         }

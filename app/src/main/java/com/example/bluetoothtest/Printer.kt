@@ -8,6 +8,9 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.*
 
+/**
+ * 打印工具类
+ */
 object Printer {
 
     private var mDevice: BluetoothDevice? = null
@@ -16,22 +19,22 @@ object Printer {
     private var mOutputStream: OutputStream? = null
 
     fun connectBluetooth(
-        bluetoothAdapter: BluetoothAdapter, macAddress: String, listener: (Boolean) -> Unit
+        bluetoothAdapter: BluetoothAdapter, macAddress: String, resultListener: (Boolean) -> Unit
     ) {
         try {
             if (BluetoothAdapter.checkBluetoothAddress(macAddress)) {
                 mDevice = bluetoothAdapter.getRemoteDevice(macAddress)
                 mSocket = mDevice?.createInsecureRfcommSocketToServiceRecord(
-                    UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+                    UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")//这个值是固定的
                 )
                 mSocket?.connect()
                 mInputStream = mSocket?.inputStream
                 mOutputStream = mSocket?.outputStream
-                listener(mInputStream != null && mOutputStream != null)
+                resultListener(mInputStream != null && mOutputStream != null)
             }
         } catch (var2: IOException) {
             var2.printStackTrace()
-            listener(false)
+            resultListener(false)
         }
     }
 
