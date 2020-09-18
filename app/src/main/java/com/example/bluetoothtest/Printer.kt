@@ -22,6 +22,7 @@ object Printer {
      * 连接蓝牙设备
      */
     fun connectBluetooth(bluetoothAdapter: BluetoothAdapter, macAddress: String): Boolean {
+        closeBluetooth()
         try {
             if (BluetoothAdapter.checkBluetoothAddress(macAddress)) {
                 mDevice = bluetoothAdapter.getRemoteDevice(macAddress)
