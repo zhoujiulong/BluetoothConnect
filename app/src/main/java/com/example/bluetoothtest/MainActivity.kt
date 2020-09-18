@@ -20,6 +20,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        //请求权限，简单处理一下，实际项目开发要完善比如回调的处理
         ActivityCompat.requestPermissions(
             this,
             arrayOf(
@@ -31,12 +32,15 @@ class MainActivity : AppCompatActivity() {
             123
         )
 
+        //跳转到蓝牙连接页面
         connectBluetooth.setOnClickListener {
             startActivity(Intent(this, BtConnectActivity::class.java))
         }
+        //测试打印二维码
         tvPrintQrCodeTest.setOnClickListener {
             printQRCodeTest()
         }
+        //测试打印字符串
         tvPrintStringTest.setOnClickListener {
             printStringTest()
         }
@@ -47,6 +51,10 @@ class MainActivity : AppCompatActivity() {
         Printer.closeBluetooth()
     }
 
+    /**
+     * 发送的协议和字节码是基于 汉印HM-A300 打印设备的
+     * 打印二维码，使用协程放到子线程中操作，同时绑定生命周期
+     */
     private fun printQRCodeTest() {
         lifecycleScope.launch(Dispatchers.IO) {
             Printer.openEndStatic(true)
@@ -57,6 +65,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * 发送的协议和字节码是基于 汉印HM-A300 打印设备的
+     * 打印字符串，使用协程放到子线程中操作，同时绑定生命周期
+     */
     private fun printStringTest() {
         lifecycleScope.launch(Dispatchers.IO) {
             Printer.openEndStatic(true)
@@ -68,6 +80,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * 发送的协议和字节码是基于 汉印HM-A300 打印设备的
+     * 获取打印结果，使用协程放到子线程中操作，同时绑定生命周期
+     */
     private fun showPrintStatus() {
         val resultStatus = Printer.getEndStatus(10)
         Printer.openEndStatic(false)

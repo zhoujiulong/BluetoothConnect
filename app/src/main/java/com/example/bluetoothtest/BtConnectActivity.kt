@@ -20,14 +20,17 @@ import kotlinx.coroutines.withContext
  */
 class BtConnectActivity : AppCompatActivity() {
 
+    //搜索到的蓝牙设备列表
     private lateinit var mBluetoothAdapter: BluetoothAdapter
 
-    private val mBtDeviceList: MutableList<PrintDeviceBean> = mutableListOf()
+    //蓝牙搜索类
     private val mBluetoothDiscovery by lazy { BluetoothDiscovery(this, mBluetoothAdapter) }
+
+    //蓝牙设备列表适配器
     private val mAdapter by lazy {
         object :
             BaseQuickAdapter<PrintDeviceBean, BaseViewHolder>(
-                android.R.layout.simple_list_item_2, mBtDeviceList
+                android.R.layout.simple_list_item_2, null
             ) {
             override fun convert(holder: BaseViewHolder, item: PrintDeviceBean) {
                 holder.setText(android.R.id.text1, item.name)
@@ -35,6 +38,8 @@ class BtConnectActivity : AppCompatActivity() {
             }
         }
     }
+
+    //加载弹窗
     private val mLoadingDialog by lazy { LoadingDialog.build(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,25 +50,21 @@ class BtConnectActivity : AppCompatActivity() {
         initListener()
 
         val adapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+        //判断蓝牙功能是否开启，如果没有开启的话就跳转到开启蓝牙页面
         if (adapter == null || !adapter.isEnabled) {
-            Toast.makeText(this, "蓝牙功能未开启", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "蓝牙功能未开启，请开启蓝牙功能", Toast.LENGTH_LONG).show()
+            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            startActivityForResult(enableBtIntent, 2)
             finish()
         } else {
             mBluetoothAdapter = adapter
-            initBlu()
+            //将搜索蓝牙的添加到LifeCycle里面进行生命周期自动管理
             lifecycle.addObserver(mBluetoothDiscovery)
-            if (!mBluetoothAdapter.isEnabled) {
-                val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                startActivityForResult(enableBtIntent, 2)
-            } else {
-                startSearchBtDevices()
-            }
+            //监听搜索到的蓝牙设备
+            initBluFindListener()
+            //开始搜索蓝牙设备
+            startSearchBtDevices()
         }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (mBluetoothAdapter.isEnabled) startSearchBtDevices() else finish()
     }
 
     private fun initView() {
@@ -77,40 +78,45 @@ class BtConnectActivity : AppCompatActivity() {
 
     private fun initListener() {
         swipeRefresh.setOnRefreshListener {
-            mBluetoothDiscovery.disReceiver()
+            swipeRefresh.isRefreshing = false
             startSearchBtDevices()
-            if (swipeRefresh.isRefreshing) swipeRefresh.isRefreshing = false
         }
         mAdapter.setOnItemClickListener { _, _, position ->
+            //点击了列表的蓝牙设备，连接蓝牙设备，由于是耗时操作，使用协程放到子线程中操作
             lifecycleScope.launch(Dispatchers.Main) {
-                connectBtDevice(mBtDeviceList[position])
+                connectBtDevice(mAdapter.data[position])
             }
         }
     }
 
-    private fun initBlu() {
+    /**
+     * 设置蓝牙搜索监听
+     */
+    private fun initBluFindListener() {
         mBluetoothDiscovery.mListener = { name, macAddress ->
+            //发现了蓝牙设备，判断列表中是否有，没有就添加到列表
             var isHas = false
-            for (printBT in mBtDeviceList) {
-                if (name == printBT.mac) {
+            mAdapter.data.forEach {
+                if (name == it.mac) {
                     isHas = true
-                    break
+                    return@forEach
                 }
             }
-            if (!isHas) {
-                val printBT = PrintDeviceBean(name, macAddress)
-                mBtDeviceList.add(printBT)
-                mAdapter.notifyDataSetChanged()
-            }
+            if (!isHas) mAdapter.addData(PrintDeviceBean(name, macAddress))
         }
     }
 
+    /**
+     * 开始搜索蓝牙设备
+     */
     private fun startSearchBtDevices() {
-        mBtDeviceList.clear()
-        mAdapter.notifyDataSetChanged()
+        mAdapter.setNewInstance(null)
         mBluetoothDiscovery.doDiscovery()
     }
 
+    /**
+     * 连接蓝牙设备
+     */
     private suspend fun connectBtDevice(device: PrintDeviceBean) {
         mLoadingDialog.show()
         val connectResult = withContext(Dispatchers.IO) {

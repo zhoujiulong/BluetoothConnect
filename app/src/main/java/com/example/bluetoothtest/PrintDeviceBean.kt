@@ -1,10 +1,10 @@
 package com.example.bluetoothtest
 
 /**
- * Created by NO on 2019/3/26.
+ * 蓝牙设备实体类
  */
 data class PrintDeviceBean(
-    val name: String,
-    val mac: String
+    val name: String,//设备名称
+    val mac: String//设备mac地址
 )
 

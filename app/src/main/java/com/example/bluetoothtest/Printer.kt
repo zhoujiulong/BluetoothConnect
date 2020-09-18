@@ -18,6 +18,9 @@ object Printer {
     private var mInputStream: InputStream? = null
     private var mOutputStream: OutputStream? = null
 
+    /**
+     * 连接蓝牙设备
+     */
     fun connectBluetooth(bluetoothAdapter: BluetoothAdapter, macAddress: String): Boolean {
         try {
             if (BluetoothAdapter.checkBluetoothAddress(macAddress)) {
