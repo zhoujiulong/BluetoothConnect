@@ -41,9 +41,16 @@ object Printer {
     }
 
     fun closeBluetooth() {
-        mInputStream?.close()
-        mOutputStream?.close()
-        mSocket?.close()
+        try {
+            mInputStream?.close()
+            mInputStream = null
+            mOutputStream?.close()
+            mOutputStream = null
+            mSocket?.close()
+            mSocket = null
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     /**
