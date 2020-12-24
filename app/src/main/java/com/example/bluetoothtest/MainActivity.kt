@@ -1,7 +1,12 @@
 package com.example.bluetoothtest
 
 import android.Manifest
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -10,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+
 
 /**
  * 项目中连接的蓝牙设备为汉印蓝牙打印机，型号为 HM-A300
@@ -32,6 +38,12 @@ class MainActivity : AppCompatActivity() {
             123
         )
 
+        //蓝牙广播
+        val intentFilter = IntentFilter()
+        intentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+        intentFilter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
+        registerReceiver(mBlueToothStateReceiver, intentFilter)
+
         //跳转到蓝牙连接页面
         connectBluetooth.setOnClickListener {
             startActivity(Intent(this, BtConnectActivity::class.java))
@@ -47,8 +59,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
+        unregisterReceiver(mBlueToothStateReceiver)
         Printer.closeBluetooth()
+        super.onDestroy()
+    }
+
+    //蓝牙广播
+    private val mBlueToothStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val action = intent.action
+            if (BluetoothDevice.ACTION_ACL_DISCONNECTED == action) {//蓝牙设备断开
+                val device =
+                    intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                device?.apply {
+                    if (Printer.getDeviceAddress() == address) Printer.closeBluetooth()
+                }
+            } else if (BluetoothAdapter.ACTION_STATE_CHANGED == action) {//蓝牙状态改变
+                when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, 1000)) {
+                    BluetoothAdapter.STATE_OFF -> {//蓝牙关闭
+                        Printer.closeBluetooth()
+                    }
+                    BluetoothAdapter.STATE_ON -> {//蓝牙打开
+                    }
+                    BluetoothAdapter.STATE_TURNING_ON -> {
+                    }
+                    BluetoothAdapter.STATE_TURNING_OFF -> {
+                    }
+                }
+            }
+        }
     }
 
     /**

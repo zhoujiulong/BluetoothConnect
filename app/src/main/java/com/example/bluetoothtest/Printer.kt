@@ -18,6 +18,10 @@ object Printer {
     private var mInputStream: InputStream? = null
     private var mOutputStream: OutputStream? = null
 
+    fun getDeviceAddress(): String {
+        return mDevice?.address ?: ""
+    }
+
     /**
      * 连接蓝牙设备
      */
